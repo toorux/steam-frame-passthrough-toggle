@@ -1,0 +1,14 @@
+[Unit]
+Description=Steam Frame passthrough Dock tri-state toggle
+After=graphical-session.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 @INSTALL_DIR@/src/steam_frame_passthrough_toggle.py
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

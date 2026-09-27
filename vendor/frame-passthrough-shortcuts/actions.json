@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "minimum_required_version": 1,
+  "action_sets": [
+    { "name": "/actions/shortcuts", "usage": "leftright" }
+  ],
+  "actions": [
+    { "name": "/actions/shortcuts/in/toggle_style", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/shortcuts/in/translucent", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/shortcuts/in/opaque", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/shortcuts/in/toggle_rgb", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/shortcuts/in/rgb", "type": "boolean", "requirement": "optional" },
+    { "name": "/actions/shortcuts/in/monochrome", "type": "boolean", "requirement": "optional" }
+  ],
+  "default_bindings": [
+    { "controller_type": "frame_controller", "binding_url": "bindings/frame_controller.json" },
+    { "controller_type": "frame_hmd", "binding_url": "bindings/frame_hmd.json" }
+  ],
+  "localization": [
+    {
+      "language_tag": "en_us",
+      "/actions/shortcuts": "Passthrough shortcuts",
+      "/actions/shortcuts/in/toggle_style": "Toggle translucent / opaque",
+      "/actions/shortcuts/in/translucent": "Use translucent passthrough",
+      "/actions/shortcuts/in/opaque": "Use opaque passthrough",
+      "/actions/shortcuts/in/toggle_rgb": "Toggle RGB / monochrome",
+      "/actions/shortcuts/in/rgb": "Use RGB camera",
+      "/actions/shortcuts/in/monochrome": "Use monochrome cameras"
+    }
+  ]
+}
