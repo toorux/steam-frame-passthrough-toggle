@@ -17,7 +17,7 @@ import time
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 LOG = logging.getLogger("steam-frame-passthrough-toggle")
@@ -221,7 +221,7 @@ class ApiHandler(BaseHTTPRequestHandler):
 
 INJECT_SCRIPT = r"""
 (() => {
-  const VERSION = 3;
+  const VERSION = 4;
   if (window.__sfPassthroughToggle?.version === VERSION) return "already installed";
   window.__sfPassthroughToggle?.dispose?.();
 
@@ -389,10 +389,15 @@ def evaluate(websocket_url: str, expression: str) -> str:
                 return str(result.get("value", ""))
 
 
+def is_dock_target(target: dict[str, object]) -> bool:
+    query = parse_qs(urlparse(str(target.get("url", ""))).query)
+    return query.get("vrOverlayKey") == ["valve.steam.gamepadui.bar"]
+
+
 def inject_once() -> str:
     with urllib.request.urlopen(f"http://127.0.0.1:{CEF_PORT}/json", timeout=3) as response:
         targets = json.load(response)
-    target = next(item for item in targets if "valve.steam.gamepadui.bar" in f"{item.get('title')} {item.get('url')}")
+    target = next(item for item in targets if is_dock_target(item))
     return evaluate(target["webSocketDebuggerUrl"], INJECT_SCRIPT)
 
 

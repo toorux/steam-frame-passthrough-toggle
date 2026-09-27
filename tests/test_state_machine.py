@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from steam_frame_passthrough_toggle import TriStateController  # noqa: E402
+from steam_frame_passthrough_toggle import TriStateController, is_dock_target  # noqa: E402
 
 
 class FakeCamera:
@@ -44,6 +44,14 @@ class TriStateTests(unittest.TestCase):
         control.mode = "color"
         camera.available = False
         self.assertEqual(control.state(True), {"state": "color", "rgbAvailable": True})
+
+
+class TargetSelectionTests(unittest.TestCase):
+    def test_bar_popup_is_not_the_dock(self):
+        popup = {"url": "about:blank?vrOverlayKey=valve.steam.gamepadui.barpopup.42020001"}
+        dock = {"url": "about:blank?vrOverlayKey=valve.steam.gamepadui.bar"}
+        self.assertFalse(is_dock_target(popup))
+        self.assertTrue(is_dock_target(dock))
 
 
 if __name__ == "__main__":
