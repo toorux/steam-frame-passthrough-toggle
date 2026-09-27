@@ -33,25 +33,55 @@ HELPER = HELPER_DIR / "frame-passthrough-shortcuts"
 class CameraControl:
     def __init__(self, helper: Path = HELPER):
         self.helper = helper
+        self._detected = False
+        self._missing_since: float | None = None
+        self._next_detection = 0.0
 
     def rgb_available(self) -> bool:
         if override := os.getenv("SF_RGB_AVAILABLE"):
             return override == "1"
+        now = time.monotonic()
+        if now < self._next_detection:
+            return self._detected
+        self._next_detection = now + 0.25
         try:
             import array
             import fcntl
 
+            found_sensor = False
+            valid_read = False
+            connected = False
             for name_file in Path("/sys/class/video4linux").glob("video*/name"):
                 if not name_file.read_text(errors="replace").startswith("arcimx616 "):
                     continue
-                value = array.array("I", [0])
-                with (Path("/dev") / name_file.parent.name).open("rb+", buffering=0) as device:
-                    fcntl.ioctl(device, 0x800456C1, value, True)
-                if value[0] == 1:
-                    return True
+                found_sensor = True
+                descriptor = -1
+                try:
+                    descriptor = os.open(
+                        Path("/dev") / name_file.parent.name,
+                        os.O_RDWR | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0),
+                    )
+                    value = array.array("I", [0])
+                    fcntl.ioctl(descriptor, 0x800456C1, value, True)
+                    valid_read = True
+                    connected = connected or value[0] == 1
+                except OSError:
+                    continue
+                finally:
+                    if descriptor >= 0:
+                        os.close(descriptor)
+            if found_sensor and not valid_read:
+                return self._detected
+            if connected:
+                self._detected = True
+                self._missing_since = None
+            elif self._detected:
+                self._missing_since = self._missing_since or now
+                if now - self._missing_since >= 2:
+                    self._detected = False
         except (ImportError, OSError):
-            pass
-        return False
+            return self._detected
+        return self._detected
 
     def _run(self, *arguments: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -121,11 +151,14 @@ class TriStateController:
 
     def state(self, room_view_active: bool) -> dict[str, object]:
         with self.lock:
+            available = self.camera.rgb_available()
             if not room_view_active:
                 self.mode = "off"
             elif self.mode == "off":
-                self.mode = self.camera.source() or ("color" if self.camera.rgb_available() else "mono")
-            return {"state": self.mode, "rgbAvailable": self.camera.rgb_available()}
+                self.mode = self.camera.source() or ("color" if available else "mono")
+            elif self.mode == "color" and not available:
+                self.mode = "mono"
+            return {"state": self.mode, "rgbAvailable": available}
 
 
 class ApiHandler(BaseHTTPRequestHandler):

@@ -37,6 +37,13 @@ class TriStateTests(unittest.TestCase):
         control.activate_source("mono")
         self.assertEqual(control.cycle(True), {"state": "off", "invokeNative": True})
 
+    def test_removed_accessory_degrades_color_state(self):
+        camera = FakeCamera()
+        control = TriStateController(camera)
+        control.mode = "color"
+        camera.available = False
+        self.assertEqual(control.state(True), {"state": "mono", "rgbAvailable": False})
+
 
 if __name__ == "__main__":
     unittest.main()

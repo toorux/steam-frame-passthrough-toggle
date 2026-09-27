@@ -51,6 +51,7 @@ install -m 644 "$SOURCE_DIR/vendor/frame-passthrough-shortcuts/actions.json" "$S
 
 sed "s|@INSTALL_DIR@|$INSTALL_DIR|g" "$SOURCE_DIR/steam-frame-passthrough-toggle.service" > "$UNIT_DIR/$UNIT_NAME"
 systemctl --user daemon-reload
-systemctl --user enable --now "$UNIT_NAME"
+systemctl --user enable "$UNIT_NAME"
+systemctl --user restart "$UNIT_NAME"
 systemctl --user is-active --quiet "$UNIT_NAME"
 echo "Installed. Logs: journalctl --user -u steam-frame-passthrough-toggle -f"
