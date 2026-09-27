@@ -27,7 +27,10 @@ esac
 command -v python3 >/dev/null 2>&1 || { echo "python3 is required" >&2; exit 1; }
 command -v systemctl >/dev/null 2>&1 || { echo "systemd is required" >&2; exit 1; }
 
-SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || true)
+SOURCE_DIR=""
+if [ "$(basename -- "$0")" = "install.sh" ] && [ -f "$0" ]; then
+    SOURCE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || true)
+fi
 if [ ! -f "$SOURCE_DIR/src/steam_frame_passthrough_toggle.py" ]; then
     command -v curl >/dev/null 2>&1 || { echo "curl is required for remote installation" >&2; exit 1; }
     command -v unzip >/dev/null 2>&1 || { echo "unzip is required for remote installation" >&2; exit 1; }
