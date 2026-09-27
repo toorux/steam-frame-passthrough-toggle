@@ -51,7 +51,7 @@ journalctl --user -u steam-frame-passthrough-toggle -f
 
 - 后台服务只监听 `127.0.0.1:27655`。
 - 它通过本机 CEF CDP `127.0.0.1:8081` 注入现有 `valve.steam.gamepadui.bar` 页面。
-- 按钮按 SteamVR Dashboard Action ID `605400007` 定位，不依赖易变化的 CSS 类名或按钮序号。
+- 按钮按 SteamVR 房间视角动作的调用类型与图标签名定位，不依赖重启后会变化的 Action ID、CSS 类名或按钮序号。
 - RGB 配件通过 `arcimx616` 视频节点和驱动连接查询检测。
 - 相机来源调用 SteamVR 私有 `IVRCameraPassthroughInternal_001` 接口。
 

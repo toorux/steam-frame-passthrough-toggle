@@ -21,7 +21,6 @@ from urllib.parse import parse_qs, urlparse
 
 
 LOG = logging.getLogger("steam-frame-passthrough-toggle")
-ACTION_ID = 605400007
 API_HOST = "127.0.0.1"
 API_PORT = 27655
 CEF_PORT = 8081
@@ -221,20 +220,25 @@ class ApiHandler(BaseHTTPRequestHandler):
 
 INJECT_SCRIPT = r"""
 (() => {
-  const VERSION = 4;
+  const VERSION = 5;
   if (window.__sfPassthroughToggle?.version === VERSION) return "already installed";
   window.__sfPassthroughToggle?.dispose?.();
 
   const API = "http://127.0.0.1:27655";
-  const ACTION_ID = 605400007;
   let mode = "off";
   let bypass = false;
+
+  function isRoomViewAction(action) {
+    // action_id changes when SteamVR restarts. This native toggle signature
+    // remained stable across the observed 605400007 and 1045000007 IDs.
+    return action?.invocation === 2 && action?.icon?.enum === 2 && action?.icon_active?.enum === 1;
+  }
 
   function actionFor(button) {
     const key = Object.keys(button).find(key => key.startsWith("__reactFiber"));
     for (let fiber = key && button[key], depth = 0; fiber && depth < 16; fiber = fiber.return, depth++) {
       const action = fiber.memoizedProps?.action;
-      if (action?.action_id === ACTION_ID) return action;
+      if (isRoomViewAction(action)) return action;
     }
   }
 
