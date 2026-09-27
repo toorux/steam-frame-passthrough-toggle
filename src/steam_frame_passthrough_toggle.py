@@ -210,7 +210,7 @@ class ApiHandler(BaseHTTPRequestHandler):
 
 INJECT_SCRIPT = r"""
 (() => {
-  const VERSION = 1;
+  const VERSION = 2;
   if (window.__sfPassthroughToggle?.version === VERSION) return "already installed";
   window.__sfPassthroughToggle?.dispose?.();
 
@@ -239,14 +239,7 @@ INJECT_SCRIPT = r"""
     if (!svg) return;
     for (const path of svg.querySelectorAll("path")) {
       if (!path.dataset.sfOriginalFill) path.dataset.sfOriginalFill = path.getAttribute("fill") || "currentColor";
-      path.setAttribute("fill", mode === "color" ? "url(#sf-passthrough-color)" : path.dataset.sfOriginalFill);
-    }
-    let defs = svg.querySelector("defs[data-sf-passthrough]");
-    if (!defs) {
-      defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-      defs.dataset.sfPassthrough = "";
-      defs.innerHTML = '<linearGradient id="sf-passthrough-color" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".5" stop-color="#a855f7"/><stop offset="1" stop-color="#fb923c"/></linearGradient>';
-      svg.prepend(defs);
+      path.setAttribute("fill", mode === "color" ? "#a855f7" : path.dataset.sfOriginalFill);
     }
   }
 
