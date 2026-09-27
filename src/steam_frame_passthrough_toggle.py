@@ -102,7 +102,7 @@ class CameraControl:
             return "mono"
         return None
 
-    def set_source(self, source: str, retry_seconds: float = 3.0) -> None:
+    def set_source(self, source: str, retry_seconds: float = 3.0) -> str:
         action = "rgb" if source == "color" else "monochrome"
         deadline = time.monotonic() + retry_seconds
         last_output = ""
@@ -110,7 +110,15 @@ class CameraControl:
             result = self._run("--action", action)
             last_output = (result.stdout + result.stderr).strip()
             if result.returncode == 0:
-                return
+                if "not detected" in last_output:
+                    return "mono"
+                if "source set to RGB" in last_output:
+                    self._detected = True
+                    self._missing_since = None
+                    return "color"
+                if "source set to monochrome" in last_output:
+                    return "mono"
+                return source
             if time.monotonic() >= deadline:
                 raise RuntimeError(last_output or f"camera helper exited {result.returncode}")
             time.sleep(0.2)
@@ -127,11 +135,14 @@ class TriStateController:
     def cycle(self, room_view_active: bool) -> dict[str, object]:
         with self.lock:
             if not room_view_active:
-                self.mode = "color" if self.camera.rgb_available() else "mono"
-                return {"state": self.mode, "invokeNative": True, "postSource": self.mode}
+                # SteamVR's own action is authoritative: try RGB after the
+                # renderer opens, then stay monochrome when it reports that no
+                # accessory is connected.
+                self.mode = "mono"
+                return {"state": "mono", "invokeNative": True, "postSource": "color"}
 
             source = self.camera.source() or self.mode
-            if self.camera.rgb_available() and source == "color":
+            if source == "color":
                 self.camera.set_source("mono")
                 self.mode = "mono"
                 return {"state": "mono", "invokeNative": False}
@@ -144,10 +155,10 @@ class TriStateController:
             raise ValueError("invalid camera source")
         with self.lock:
             if source == "color" and not self.camera.rgb_available():
-                source = "mono"
-            self.camera.set_source(source)
-            self.mode = source
-            return {"state": source}
+                LOG.info("RGB ioctl detection unavailable; asking SteamVR directly")
+            actual = self.camera.set_source(source)
+            self.mode = actual
+            return {"state": actual}
 
     def state(self, room_view_active: bool) -> dict[str, object]:
         with self.lock:
@@ -156,8 +167,8 @@ class TriStateController:
                 self.mode = "off"
             elif self.mode == "off":
                 self.mode = self.camera.source() or ("color" if available else "mono")
-            elif self.mode == "color" and not available:
-                self.mode = "mono"
+            if self.mode == "color":
+                available = True
             return {"state": self.mode, "rgbAvailable": available}
 
 
@@ -210,7 +221,7 @@ class ApiHandler(BaseHTTPRequestHandler):
 
 INJECT_SCRIPT = r"""
 (() => {
-  const VERSION = 2;
+  const VERSION = 3;
   if (window.__sfPassthroughToggle?.version === VERSION) return "already installed";
   window.__sfPassthroughToggle?.dispose?.();
 
@@ -234,12 +245,13 @@ INJECT_SCRIPT = r"""
   function decorate() {
     const target = button();
     if (!target) return;
-    target.dataset.sfPassthroughState = mode;
+    const visibleMode = actionFor(target)?.active ? mode : "off";
+    target.dataset.sfPassthroughState = visibleMode;
     const svg = target.querySelector("svg");
     if (!svg) return;
     for (const path of svg.querySelectorAll("path")) {
       if (!path.dataset.sfOriginalFill) path.dataset.sfOriginalFill = path.getAttribute("fill") || "currentColor";
-      path.setAttribute("fill", mode === "color" ? "#a855f7" : path.dataset.sfOriginalFill);
+      path.setAttribute("fill", visibleMode === "color" ? "#a855f7" : path.dataset.sfOriginalFill);
     }
   }
 

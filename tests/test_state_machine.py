@@ -18,31 +18,32 @@ class FakeCamera:
         return self.current
 
     def set_source(self, source, retry_seconds=3.0):
-        self.current = source
+        self.current = source if self.available or source == "mono" else "mono"
+        return self.current
 
 
 class TriStateTests(unittest.TestCase):
     def test_rgb_cycle(self):
         camera = FakeCamera()
         control = TriStateController(camera)
-        self.assertEqual(control.cycle(False), {"state": "color", "invokeNative": True, "postSource": "color"})
-        control.activate_source("color")
+        self.assertEqual(control.cycle(False), {"state": "mono", "invokeNative": True, "postSource": "color"})
+        self.assertEqual(control.activate_source("color"), {"state": "color"})
         self.assertEqual(control.cycle(True), {"state": "mono", "invokeNative": False})
         self.assertEqual(control.cycle(True), {"state": "off", "invokeNative": True})
 
     def test_no_accessory_skips_color(self):
         camera = FakeCamera(available=False)
         control = TriStateController(camera)
-        self.assertEqual(control.cycle(False), {"state": "mono", "invokeNative": True, "postSource": "mono"})
-        control.activate_source("mono")
+        self.assertEqual(control.cycle(False), {"state": "mono", "invokeNative": True, "postSource": "color"})
+        self.assertEqual(control.activate_source("color"), {"state": "mono"})
         self.assertEqual(control.cycle(True), {"state": "off", "invokeNative": True})
 
-    def test_removed_accessory_degrades_color_state(self):
+    def test_active_rgb_source_is_authoritative(self):
         camera = FakeCamera()
         control = TriStateController(camera)
         control.mode = "color"
         camera.available = False
-        self.assertEqual(control.state(True), {"state": "mono", "rgbAvailable": False})
+        self.assertEqual(control.state(True), {"state": "color", "rgbAvailable": True})
 
 
 if __name__ == "__main__":
